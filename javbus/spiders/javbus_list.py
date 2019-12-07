@@ -51,7 +51,25 @@ class JavbusListSpider(scrapy.Spider):
             print(bango)
             print(date)
 
-            yield Request("https://www.buscdn.work/page/2", callback=self.parse_detail, dont_filter=True)
+            yield Request("https://www.buscdn.work/page/2", callback=self.parse_detail,
+                          meta= {
+                              "item": {
+                                  "url": url,
+                                  "img_url": img_url,
+                                  "img_title": img_title,
+                                  "title": title,
+                                  "is_hd_link_flag": is_hd_link_flag,
+                                  "is_hd_link_title": is_hd_link_title,
+                                  "is_hd_link_text": is_hd_link_text,
+
+                                  "is_magnet_link_flag": is_magnet_link_flag,
+                                  "is_magnet_link_title": is_magnet_link_title,
+                                  "is_magnet_link_text": is_magnet_link_text,
+
+                                  "bango": bango,
+                                  "date": date
+                              }
+                          }, dont_filter=True)
         pass
 
     def parse_detail(self, response):
@@ -70,3 +88,33 @@ class JavbusListSpider(scrapy.Spider):
             "//div[@class='col-md-3 info']//p[contains(text(), '類別')]/following-sibling::*/span[@class='genre']//text()")
 
         performer = response.xpath("//div[@class='col-md-3 info']//div[@class='star-name']//text()").extract_first()
+
+        # 大图
+        response.xpath("//div[@id='sample-waterfall']/*[@class='sample-box']/@href")
+
+        # 缩略图
+        response.xpath("//div[@id='sample-waterfall']/*[@class='sample-box']//img/@src")
+
+        # 相关内容
+        a = response.xpath("//div[@id='related-waterfall']//a")
+        for aa in a:
+            aa.xpath("@title")
+            aa.xpath("@href")
+            aa.xpath("@title")
+            aa.xpath("div/img/@src")
+
+        item = response.meta['item']
+        item['detail'] = {
+            'title': title,
+            'big_image': big_image,
+            'no_bango_title': no_bango_title,
+            'bango': bango,
+            'date': date,
+            'length': length,
+            'company': company,
+            'distributor': distributor,
+            'director': director,
+            'genres': genres,
+            'performer': performer,
+        }
+        yield Request(url=item['url'], dont_filter=True, meta={"item": item})
