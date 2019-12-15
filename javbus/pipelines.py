@@ -18,12 +18,29 @@ from javbus import settings
 
 class JavbusImagePipeline(ImagesPipeline):
     def get_media_requests(self, item, info):
-        big_image = item['big_image']
+        img = item['img_url']
 
         path = None
-        if item and item['date'] and item['index']:
+        if item and item['date'] and item['bango']:
             # 这个参数的request就是上面的yield Request.通过meta传递自定义参数
-            path = item['date'] + "/" + item['index'] + "/" + big_image.split('/')[-1]
+            path = item['date'] + "/" + item['bango'] + "/" + img.split('/')[-1]
+        else:
+            path = img.split('/')[-1]
+
+        if path and os.path.exists(settings.IMAGES_STORE + "/" + path):
+            # print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " exists")
+            pass
+        else:
+            # print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " not exists")
+            # 挂本地代理
+            yield Request(img, meta={'item': item, 'proxy': 'http://127.0.0.1:1087', 'category': ''}, dont_filter=True)
+
+        big_image = item['detail']['big_image']
+
+        path = None
+        if item and item['date'] and item['bango']:
+            # 这个参数的request就是上面的yield Request.通过meta传递自定义参数
+            path = item['date'] + "/" + item['bango'] + "/" + big_image.split('/')[-1]
         else:
             path = big_image.split('/')[-1]
 
@@ -33,29 +50,69 @@ class JavbusImagePipeline(ImagesPipeline):
         else:
             # print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " not exists")
             # 挂本地代理
-            yield Request(big_image, meta={'item': item, 'proxy': 'http://127.0.0.1:1087'}, dont_filter=True)
+            yield Request(big_image, meta={'item': item, 'proxy': 'http://127.0.0.1:1087', 'category': ''},
+                          dont_filter=True)
 
-        imgs = item['detail']['imgs']
-        for img in imgs:
+        pics = item['detail']['pics']
+        for pic in pics:
             path = None
-            if item and item['date'] and item['index']:
+            pic_thumbnail = pic['thumbnail']
+            pic_big = pic['big']
+            if item and item['date'] and item['bango']:
                 # 这个参数的request就是上面的yield Request.通过meta传递自定义参数
-                path = item['date'] + "/" + item['index'] + "/" + img.split('/')[-1]
+                path = item['date'] + "/" + item['bango'] + "/pics/" + pic_thumbnail.split('/')[-1]
             else:
-                path = img.split('/')[-1]
+                path = pic_thumbnail.split('/')[-1]
 
             if path and os.path.exists(settings.IMAGES_STORE + "/" + path):
-                #print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " exists")
+                # print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " exists")
                 pass
             else:
-                #print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " not exists")
-                yield Request(img, meta={'item': item, 'proxy': 'http://127.0.0.1:1087'}, dont_filter=True)
+                # print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " not exists")
+                yield Request(pic_thumbnail, meta={'item': item, 'proxy': 'http://127.0.0.1:1087', 'category': 'pics'},
+                              dont_filter=True)
+
+            if item and item['date'] and item['bango']:
+                # 这个参数的request就是上面的yield Request.通过meta传递自定义参数
+                path = item['date'] + "/" + item['bango'] + "/pics/" + pic_big.split('/')[-1]
+            else:
+                path = pic_big.split('/')[-1]
+
+            if path and os.path.exists(settings.IMAGES_STORE + "/" + path):
+                # print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " exists")
+                pass
+            else:
+                # print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " not exists")
+                yield Request(pic_big, meta={'item': item, 'proxy': 'http://127.0.0.1:1087', 'category': 'pics'},
+                              dont_filter=True)
+
+        related = item['detail']['related']
+        for r in related:
+            path = None
+            r_img = r['img']
+            if item and item['date'] and item['bango']:
+                # 这个参数的request就是上面的yield Request.通过meta传递自定义参数
+                path = item['date'] + "/" + item['bango'] + "/related/" + r_img.split('/')[-1]
+            else:
+                path = r_img.split('/')[-1]
+
+            if path and os.path.exists(settings.IMAGES_STORE + "/" + path):
+                # print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " exists")
+                pass
+            else:
+                # print(item['url'] + ": " + settings.IMAGES_STORE + "/" + path + " not exists")
+                yield Request(r_img, meta={'item': item, 'proxy': 'http://127.0.0.1:1087', 'category': 'related'},
+                              dont_filter=True)
 
     def file_path(self, request, response=None, info=None):
         item = request.meta['item']
-        if item and item['date'] and item['index']:
+        category = request.meta['category']
+        if item and item['date'] and item['bango']:
             # 这个参数的request就是上面的yield Request.通过meta传递自定义参数
-            return item['date'] + "/" + item['index'] + "/" + request.url.split('/')[-1]
+            if category is 'related' or category is 'pics':
+                return item['date'] + "/" + item['bango'] + "/" + category + "/" + request.url.split('/')[-1]
+            else:
+                return item['date'] + "/" + item['bango'] + "/" + request.url.split('/')[-1]
         else:
             return request.url.split('/')[-1]
 
@@ -95,7 +152,7 @@ class JavbusImagePipeline(ImagesPipeline):
             if self.check_gif(image):
                 self.persist_gif(path, response.body, info)
             else:
-                self.store.persist_file(path, buf, info, meta={'width': width, 'height':height},
+                self.store.persist_file(path, buf, info, meta={'width': width, 'height': height},
                                         headers={'Content-Type': 'image/jpeg'})
         return checksum
 
@@ -103,16 +160,17 @@ class JavbusImagePipeline(ImagesPipeline):
         print(item['url'] + str(results))
         return item
 
+
 class JavbusMongoPipeline(object):
 
     def open_spider(self, spider):
-        self.mongo_client = pymongo.MongoClient(host='192.168.0.109', port=27017)
+        self.mongo_client = pymongo.MongoClient(host='192.168.0.111', port=27017)
         self.collection = self.mongo_client.javbus.article
 
     def close_spider(self, spider):
         self.mongo_client.close()
 
     def process_item(self, item, spider):
-        m = self.collection.update({'url': item['url']}, dict(item), upsert=True)
+        m = self.collection.update_one({'url': item['url']}, {'$set': dict(item)}, upsert=True)
         print(m)
         return item

@@ -68,7 +68,8 @@ DOWNLOADER_MIDDLEWARES = {
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    # 'javbus.pipelines.JavbusPipeline': 300,
+     'javbus.pipelines.JavbusMongoPipeline': 820,
+     'javbus.pipelines.JavbusImagePipeline': 821,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -94,3 +95,6 @@ ITEM_PIPELINES = {
 
 # DUPEFILTER_CLASS = 'scrapy_splash.SplashAwareDupeFilter'
 HTTPCACHE_STORAGE = 'scrapy_splash.SplashAwareFSCacheStorage'
+
+
+IMAGES_STORE = './images'
