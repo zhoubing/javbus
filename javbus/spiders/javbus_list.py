@@ -6,7 +6,7 @@ from scrapy_splash import SplashRequest
 
 class JavbusListSpider(scrapy.Spider):
     name = 'javbus_list'
-    allowed_domains = ['buscdn.work']
+    allowed_domains = ['buscdn.work', 'javbus.zone']
 
     # start_urls = ['http://buscdn.work/']
 
@@ -14,13 +14,21 @@ class JavbusListSpider(scrapy.Spider):
         yield Request("https://www.buscdn.work/page/7", callback=self.parse, dont_filter=True)
 
     def parse(self, response):
+        movie_category = ''
+        if 'buscdn' in response.url and 'uncensored' in response.url:
+            movie_category = 'uncensored'
+        elif 'javbus' in response.url:
+            movie_category = 'euro'
+        else:
+            movie_category = 'censored'
+
         items = response.xpath("//div[@id='waterfall']//div[@id='waterfall']/div[@class='item']")
         for item in items:
             movie_box = item.xpath("a[@class='movie-box']")
             url = movie_box.xpath("@href").extract_first()
             photo_frame = movie_box.xpath("div[@class='photo-frame']")
             img_url = photo_frame.xpath("img/@src").extract_first()
-            #img_title = photo_frame.xpath("img/@title").extract_first()
+            # img_title = photo_frame.xpath("img/@title").extract_first()
 
             photo_info = movie_box.xpath("div[@class='photo-info']/span")
 
@@ -43,6 +51,7 @@ class JavbusListSpider(scrapy.Spider):
                     "img_url": img_url,
                     # "img_title": img_title,
                     "title": title,
+                    'movie_category': movie_category,
                     "is_hd_link_text": is_hd_link_text is not None,
                     "is_magnet_link_text": is_magnet_link_text is not None,
                     "bango": bango,
@@ -147,8 +156,8 @@ class JavbusListSpider(scrapy.Spider):
             'director': director,
             'genres': genres,
             'performer': performer,
-            'magnets': magnets, #磁力链
-            'pics': pics,   #图片
+            'magnets': magnets,  # 磁力链
+            'pics': pics,  # 图片
             'related': related
         }
         yield item
